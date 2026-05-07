@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  opencog-demo:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: opencog-medical-demo
+    image: opencog-medical-demo:latest
+    volumes:
+      - ..:/app
+      - opencog-data:/opt/opencog
+    environment:
+      - PYTHONPATH=/app
+      - OPENCOG_LOG_LEVEL=INFO
+    command: python -m src.demo.run_demo
+    restart: unless-stopped
+
+  jupyter:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: opencog-jupyter
+    image: opencog-medical-demo:latest
+    volumes:
+      - ..:/app
+    ports:
+      - "8888:8888"
+    environment:
+      - PYTHONPATH=/app
+    command: >
+      jupyter notebook
+      --ip=0.0.0.0
+      --port=8888
+      --no-browser
+      --allow-root
+      --NotebookApp.token=''
+      --NotebookApp.password=''
+      --notebook-dir=/app/notebooks
+    restart: unless-stopped
+
+volumes:
+  opencog-data:
+    driver: local
