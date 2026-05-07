@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 🧠 OpenCog Medical Demo
 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
@@ -147,3 +148,7 @@ Pull requests are welcome! For major changes, please open an issue first.
 ## 📄 License
 
 [MIT](LICENSE) © 2024
+=======
+# OpenCog
+OpenCog Towards Artificial General Intelligence
+>>>>>>> 2c878397a631db9c31022af3607a6be0cecb4973
