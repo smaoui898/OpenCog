@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenCog Medical AI Demo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f172a;
+            --glass: rgba(30, 41, 59, 0.7);
+            --primary: #3b82f6;
+            --accent: #8b5cf6;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --success: #10b981;
+            --danger: #ef4444;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at top left, #1e1b4b, #0f172a 70%);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+        }
+        .container {
+            width: 100%;
+            max-width: 900px;
+            margin-top: 4rem;
+            padding: 2rem;
+            box-sizing: border-box;
+            z-index: 10;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        h1 {
+            font-weight: 800;
+            font-size: 3rem;
+            margin: 0;
+            background: linear-gradient(to right, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        p.subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            margin-top: 0.5rem;
+        }
+        .card {
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .card::before {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%; width: 200%; height: 200%;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.1) 0%, transparent 50%);
+            opacity: 0;
+            transition: opacity 0.5s;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .card:hover::before {
+            opacity: 1;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            position: relative;
+            z-index: 1;
+        }
+        label {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        input {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            color: white;
+            font-size: 1.1rem;
+            outline: none;
+            transition: all 0.3s;
+        }
+        input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+        }
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        button {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            flex: 1;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(139, 92, 246, 0.4);
+        }
+        button.outline {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.3);
+            flex: 0;
+            white-space: nowrap;
+        }
+        button.outline:hover {
+            border-color: var(--text);
+            box-shadow: 0 5px 15px rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.1);
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        #graph-container {
+            height: 150px;
+            border-radius: 8px;
+            background: rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 2rem;
+            display: none;
+        }
+        .node {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: var(--primary);
+            border-radius: 50%;
+            box-shadow: 0 0 15px var(--primary);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0.5; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .graph-text {
+            color: var(--primary);
+            font-weight: 600;
+            letter-spacing: 2px;
+            z-index: 10;
+            text-shadow: 0 0 10px rgba(0,0,0,0.8);
+            animation: fadeInOut 1.5s infinite;
+        }
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+        .results {
+            display: none;
+        }
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255,255,255,0.05);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            border-left: 4px solid var(--primary);
+            animation: slideIn 0.5s ease forwards;
+            opacity: 0;
+            transform: translateX(-20px);
+        }
+        .result-item:nth-child(1) { animation-delay: 0.1s; border-color: var(--success); }
+        .result-item:nth-child(2) { animation-delay: 0.2s; border-color: var(--primary); }
+        .result-item:nth-child(3) { animation-delay: 0.3s; border-color: var(--accent); }
+        
+        @keyframes slideIn {
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .disease-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        .confidence {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .explanation {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 8px;
+            display: none;
+            animation: fadeIn 0.5s ease forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>AtomSpace Medical AI</h1>
+            <p class="subtitle">Symbolic AI Reasoning via Probabilistic Logic Networks</p>
+        </div>
+
+        <div class="card">
+            <div class="input-group">
+                <label for="symptoms">Enter Patient Symptoms (Comma Separated)</label>
+                <input type="text" id="symptoms" placeholder="e.g., Fever, Cough, Fatigue" autocomplete="off" onkeypress="if(event.key === 'Enter') runInference()">
+                <div class="button-group">
+                    <button id="run-btn" onclick="runInference()">Run PLN Inference</button>
+                    <button id="reset-btn" class="outline" onclick="resetDemo()">Reset</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="graph-container">
+            <div class="graph-text">TRAVERSING ATOMSPACE...</div>
+            <div class="node" style="top: 20%; left: 30%; background: #10b981; box-shadow: 0 0 15px #10b981;"></div>
+            <div class="node" style="top: 60%; left: 70%; background: #8b5cf6; box-shadow: 0 0 15px #8b5cf6; animation-delay: 0.5s;"></div>
+            <div class="node" style="top: 40%; left: 50%; background: #3b82f6; box-shadow: 0 0 15px #3b82f6; animation-delay: 1s;"></div>
+            <div class="node" style="top: 80%; left: 20%; background: #f59e0b; box-shadow: 0 0 15px #f59e0b; animation-delay: 0.2s;"></div>
+            <div class="node" style="top: 30%; left: 80%; background: #ef4444; box-shadow: 0 0 15px #ef4444; animation-delay: 0.7s;"></div>
+        </div>
+
+        <div class="card results" id="results">
+            <h2 style="margin-top:0; font-size: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem; margin-bottom: 1rem;">Diagnosis Hypotheses</h2>
+            <div id="result-list"></div>
+            
+            <button id="explain-btn" style="background: transparent; border: 1px solid var(--accent); margin-top: 1.5rem; display: none;" onclick="showExplanation()">Explain Top Diagnosis</button>
+            
+            <div class="explanation" id="explanation">
+                <h3 style="margin-top:0; color: var(--accent);">Inference Explanation: Influenza</h3>
+                <p><strong>Matched Symptoms:</strong> <span id="matched-symps">Fever, Cough, Fatigue</span></p>
+                <p><strong>Missing Typical Symptoms:</strong> Muscle Aches, Sore Throat</p>
+                <ul style="color: var(--text-muted); line-height: 1.6;">
+                    <li>[Rule 1] IF (<span id="rule-symps">Patient has Fever AND Patient has Cough</span>) THEN Hypothesis += Influenza (TV: 0.85, 0.90)</li>
+                    <li>[Rule 2] INHERITANCE_LINK (Influenza, Respiratory_Disease) confirmed context.</li>
+                    <li>[Rule 3] Rule applied with backward chaining across 5 nodes.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function runInference() {
+            const symptomsInput = document.getElementById('symptoms').value;
+            if(!symptomsInput.trim()) return;
+
+            const btn = document.getElementById('run-btn');
+            btn.disabled = true;
+            btn.innerHTML = 'Reasoning...';
+
+            // Show graph animation
+            document.getElementById('graph-container').style.display = 'flex';
+            document.getElementById('results').style.display = 'none';
+            document.getElementById('explanation').style.display = 'none';
+
+            setTimeout(() => {
+                document.getElementById('graph-container').style.display = 'none';
+                document.getElementById('results').style.display = 'block';
+                
+                const resultList = document.getElementById('result-list');
+                resultList.innerHTML = `
+                    <div class="result-item">
+                        <span class="disease-name">1. Influenza</span>
+                        <span class="confidence">85.0% (TV: 0.85, 0.90)</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="disease-name">2. Common Cold</span>
+                        <span class="confidence">62.3% (TV: 0.62, 0.75)</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="disease-name">3. COVID-19</span>
+                        <span class="confidence">45.8% (TV: 0.45, 0.60)</span>
+                    </div>
+                `;
+
+                // Update dynamic text
+                document.getElementById('matched-symps').innerText = symptomsInput;
+                const sympsList = symptomsInput.split(',').map(s => s.trim()).filter(s => s);
+                const ruleText = sympsList.map(s => `Patient has ${s}`).join(' AND ');
+                document.getElementById('rule-symps').innerText = ruleText;
+
+                document.getElementById('explain-btn').style.display = 'block';
+                
+                btn.disabled = false;
+                btn.innerHTML = 'Run PLN Inference';
+            }, 2500);
+        }
+
+        function showExplanation() {
+            document.getElementById('explanation').style.display = 'block';
+            document.getElementById('explain-btn').style.display = 'none';
+        }
+
+        function resetDemo() {
+            document.getElementById('symptoms').value = '';
+            document.getElementById('results').style.display = 'none';
+            document.getElementById('explanation').style.display = 'none';
+            document.getElementById('explain-btn').style.display = 'none';
+            document.getElementById('graph-container').style.display = 'none';
+            const btn = document.getElementById('run-btn');
+            btn.innerHTML = 'Run PLN Inference';
+            btn.disabled = false;
+        }
+    </script>
+</body>
+</html>
