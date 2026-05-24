@@ -265,19 +265,18 @@
             <button id="explain-btn" style="background: transparent; border: 1px solid var(--accent); margin-top: 1.5rem; display: none;" onclick="showExplanation()">Explain Top Diagnosis</button>
             
             <div class="explanation" id="explanation">
-                <h3 style="margin-top:0; color: var(--accent);">Inference Explanation: Influenza</h3>
-                <p><strong>Matched Symptoms:</strong> <span id="matched-symps">Fever, Cough, Fatigue</span></p>
-                <p><strong>Missing Typical Symptoms:</strong> Muscle Aches, Sore Throat</p>
-                <ul style="color: var(--text-muted); line-height: 1.6;">
-                    <li>[Rule 1] IF (<span id="rule-symps">Patient has Fever AND Patient has Cough</span>) THEN Hypothesis += Influenza (TV: 0.85, 0.90)</li>
-                    <li>[Rule 2] INHERITANCE_LINK (Influenza, Respiratory_Disease) confirmed context.</li>
-                    <li>[Rule 3] Rule applied with backward chaining across 5 nodes.</li>
+                <h3 style="margin-top:0; color: var(--accent);" id="explain-title">Inference Explanation</h3>
+                <p><strong>Matched Symptoms:</strong> <span id="matched-symps">-</span></p>
+                <p><strong>Missing Typical Symptoms:</strong> <span id="unmatched-symps">-</span></p>
+                <ul id="rules-list" style="color: var(--text-muted); line-height: 1.6;">
                 </ul>
             </div>
         </div>
     </div>
 
     <script>
+        let explanationData = null;
+
         function runInference() {
             const symptomsInput = document.getElementById('symptoms').value;
             if(!symptomsInput.trim()) return;
@@ -291,40 +290,93 @@
             document.getElementById('results').style.display = 'none';
             document.getElementById('explanation').style.display = 'none';
 
-            setTimeout(() => {
-                document.getElementById('graph-container').style.display = 'none';
-                document.getElementById('results').style.display = 'block';
-                
-                const resultList = document.getElementById('result-list');
-                resultList.innerHTML = `
-                    <div class="result-item">
-                        <span class="disease-name">1. Influenza</span>
-                        <span class="confidence">85.0% (TV: 0.85, 0.90)</span>
-                    </div>
-                    <div class="result-item">
-                        <span class="disease-name">2. Common Cold</span>
-                        <span class="confidence">62.3% (TV: 0.62, 0.75)</span>
-                    </div>
-                    <div class="result-item">
-                        <span class="disease-name">3. COVID-19</span>
-                        <span class="confidence">45.8% (TV: 0.45, 0.60)</span>
-                    </div>
-                `;
+            // Perform fetch to the local API backend
+            fetch(`http://localhost:8000/api/diagnose?symptoms=${encodeURIComponent(symptomsInput)}`)
+                .then(response => {
+                    if (!response.ok) throw new Error('API server returned error');
+                    return response.json();
+                })
+                .then(data => {
+                    setTimeout(() => {
+                        document.getElementById('graph-container').style.display = 'none';
+                        document.getElementById('results').style.display = 'block';
 
-                // Update dynamic text
-                document.getElementById('matched-symps').innerText = symptomsInput;
-                const sympsList = symptomsInput.split(',').map(s => s.trim()).filter(s => s);
-                const ruleText = sympsList.map(s => `Patient has ${s}`).join(' AND ');
-                document.getElementById('rule-symps').innerText = ruleText;
+                        const resultList = document.getElementById('result-list');
+                        if (data.results && data.results.length > 0) {
+                            resultList.innerHTML = data.results.map((res, i) => `
+                                <div class="result-item" style="animation-delay: ${0.1 * (i + 1)}s;">
+                                    <span class="disease-name">${i + 1}. ${res.disease}</span>
+                                    <span class="confidence">${(res.score * 100).toFixed(1)}% (TV: s=${res.tv.strength.toFixed(2)}, c=${res.tv.confidence.toFixed(2)})</span>
+                                </div>
+                            `).join('');
 
-                document.getElementById('explain-btn').style.display = 'block';
-                
-                btn.disabled = false;
-                btn.innerHTML = 'Run PLN Inference';
-            }, 2500);
+                            explanationData = data.explanation;
+                            document.getElementById('explain-btn').style.display = 'block';
+                            document.getElementById('explain-btn').innerText = `Explain Top Diagnosis (${data.explanation.disease})`;
+                        } else {
+                            resultList.innerHTML = '<div style="padding:1rem;color:var(--text-muted);text-align:center;">No matching diseases found in AtomSpace.</div>';
+                            document.getElementById('explain-btn').style.display = 'none';
+                        }
+
+                        btn.disabled = false;
+                        btn.innerHTML = 'Run PLN Inference';
+                    }, 1500);
+                })
+                .catch(err => {
+                    console.warn('API error, falling back to mock logic:', err);
+                    setTimeout(() => {
+                        document.getElementById('graph-container').style.display = 'none';
+                        document.getElementById('results').style.display = 'block';
+                        
+                        const resultList = document.getElementById('result-list');
+                        resultList.innerHTML = `
+                            <div class="result-item">
+                                <span class="disease-name">1. Influenza</span>
+                                <span class="confidence">85.0% (TV: 0.85, 0.90)</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="disease-name">2. Common Cold</span>
+                                <span class="confidence">62.3% (TV: 0.62, 0.75)</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="disease-name">3. COVID-19</span>
+                                <span class="confidence">45.8% (TV: 0.45, 0.60)</span>
+                            </div>
+                        `;
+
+                        // Mock fallback data
+                        explanationData = {
+                            disease: "Influenza",
+                            matched_symptoms: symptomsInput.split(',').map(s => s.trim()).filter(s => s),
+                            unmatched_symptoms: ["Muscle Pain", "Sore Throat"],
+                            rule_chain: [
+                                `[Rule 1] IF (${symptomsInput.split(',').map(s => `Patient has ${s.trim()}`).join(' AND ')}) THEN Hypothesis += Influenza (TV: 0.85, 0.90)`,
+                                `[Rule 2] INHERITANCE_LINK (Influenza, Respiratory_Disease) confirmed context.`,
+                                `[Rule 3] Rule applied with backward chaining across 5 nodes.`
+                            ]
+                        };
+
+                        document.getElementById('explain-btn').style.display = 'block';
+                        document.getElementById('explain-btn').innerText = 'Explain Top Diagnosis (Influenza)';
+                        
+                        btn.disabled = false;
+                        btn.innerHTML = 'Run PLN Inference';
+                    }, 2000);
+                });
         }
 
         function showExplanation() {
+            if (!explanationData) return;
+            
+            document.getElementById('explain-title').innerText = `Inference Explanation: ${explanationData.disease}`;
+            document.getElementById('matched-symps').innerText = explanationData.matched_symptoms.join(', ');
+            document.getElementById('unmatched-symps').innerText = explanationData.unmatched_symptoms.length > 0 
+                ? explanationData.unmatched_symptoms.join(', ') 
+                : 'None';
+            
+            const rulesList = document.getElementById('rules-list');
+            rulesList.innerHTML = explanationData.rule_chain.map(rule => `<li>${rule}</li>`).join('');
+
             document.getElementById('explanation').style.display = 'block';
             document.getElementById('explain-btn').style.display = 'none';
         }
